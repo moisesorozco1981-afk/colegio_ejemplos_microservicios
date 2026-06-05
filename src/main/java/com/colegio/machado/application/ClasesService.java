@@ -1,80 +1,69 @@
 package com.colegio.machado.application;
 
 import com.colegio.machado.application.exceptions.NotFoundException;
-import com.colegio.machado.application.usecase.*;
 import com.colegio.machado.domain.model.Clase;
-import com.colegio.machado.domain.ports.out.ClaseRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.colegio.machado.infraestructure.database.ClaseRepository;
+import com.colegio.machado.infraestructure.database.entities.ClaseEntity;
+import com.colegio.machado.infraestructure.database.mappers.ClaseEntityMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-public class ClasesService implements GetAllClasesUseCase, GetClaseByIdUseCase, CreateClaseUseCase, UpdateClaseUseCase, DeleteClaseUseCase {
-    private final ClaseRepository claseRepository;
+public class ClasesService {
 
-    private static final Logger log = LoggerFactory.getLogger(ClasesService.class);
+    @Autowired
+    ClaseRepository claseRepository;
+    @Autowired
+    ClaseEntityMapper claseMapper;
 
-    //Constructor
-    public ClasesService(ClaseRepository claseRepository) {
-        this.claseRepository = claseRepository;
-    }
-
-    //Buscar todas las clases
-    @Override
-    public List<Clase> execute() {
-        log.info("Obteniendo datos de todas las clases");
-        return claseRepository.findAll();
-    }
-
-    //Buscar clase por ID
-    @Override
-    public Clase execute(Long idClase) {
-        log.info("Buscando datos de la clase con id {}", idClase);
-        Clase clase = getClaseOrThrow(idClase);
-        log.info("Clase con id {} encontrada", idClase);
-        return clase;
-    }
-
-    //Agregar clase
-    @Override
-    public Clase execute(Clase clase) {
-        log.info("Creando clase con nombre {}", clase.getNombre());
-        Clase saved = claseRepository.save(clase);
-        log.info("Clase creada correctamente con id {}", saved.getId());
-        return saved;
-    }
-
-    //Actualizar Clase
-    @Override
-    public Clase execute(Long idClase, Clase clase) {
-        log.info("Actualizando clase con id {}", idClase);
-        Clase existente = getClaseOrThrow(idClase);
-        existente.setNombre(clase.getNombre());
-        existente.setProfesor(clase.getProfesor());
-        Clase saved = claseRepository.save(existente);
-
-        log.info("Clase con id {} actualizada", saved.getId());
-        return saved;
-    }
-
-    @Override
-    public void executeDelete(Long idClase) {
-        log.info("Eliminando clase con id {}", idClase);
-
-        getClaseOrThrow(idClase);
-
-        claseRepository.delete(idClase);
-        log.info("Clase con id {} eliminada correctamente", idClase);
-    }
-
-    private Clase getClaseOrThrow(Long idClase) {
-        Clase clase = claseRepository.findById(idClase);
-        if (clase == null) {
-            log.error("Clase con id {} no encontrada", idClase);
-            throw new NotFoundException("Clase no encontrada");
+    public List<Clase> getAllClases() {
+        List<ClaseEntity> claseEntity = claseRepository.findAll();
+        if (claseEntity.isEmpty()) {
+            throw new NotFoundException("No se encontro el clase");
         }
-        return clase;
+        List<Clase> clases = claseMapper.mapModel(claseEntity);
+
+        return clases;
     }
+
+
+    public Clase getClaseById(Long id) {
+        ClaseEntity claseEntity = claseRepository.findByIdWithAlumnos(id);
+
+        if (claseEntity == null) {
+            throw new RuntimeException("Clase no encontrada");
+        }
+
+        return claseMapper.toModel(claseEntity);
+    }
+
+
+    public Clase guardarClase(Clase clase) {
+
+        // Modelo → Entity
+        ClaseEntity entity = claseMapper.toEntity(clase);
+
+        // Guardar
+        ClaseEntity guardada = claseRepository.save(entity);
+
+        // Entity → Modelo
+        return claseMapper.toModel(guardada);
+    }
+
+    public Clase actualizarClase(Long id, Clase clase) {
+        ClaseEntity entity = claseRepository.findById(id).orElseThrow(() -> new NotFoundException("Clase no encontrada"));
+        entity.setClase(clase.getClase());
+        entity.setProfesor(clase.getProfesor());
+        ClaseEntity actualizada = claseRepository.save(entity);
+
+        return claseMapper.toModel(actualizada);
+    }
+
+    public void eliminarClase(Long id) {
+        ClaseEntity entity = claseRepository.findById(id).orElseThrow(() -> new NotFoundException("Clase no encontrada"));
+        claseRepository.delete(entity);
+    }
+
 }

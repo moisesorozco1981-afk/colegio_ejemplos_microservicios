@@ -28,7 +28,7 @@ public class ClaseEntity {
      * Nombre de la clase
      */
     @Column(name = "NOMBRE")
-    private String nombre;
+    private String clase;
     /**
      * Profesor de la clase
      */

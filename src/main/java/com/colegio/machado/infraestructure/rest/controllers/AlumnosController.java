@@ -1,12 +1,13 @@
 package com.colegio.machado.infraestructure.rest.controllers;
 
-import com.colegio.machado.application.usecase.*;
+import com.colegio.machado.application.AlumnosService;
+import com.colegio.machado.application.usecase.GetAllAlumnosUseCase;
 import com.colegio.machado.domain.model.Alumno;
 import com.colegio.machado.infraestructure.rest.dto.AlumnoDTO;
 import com.colegio.machado.infraestructure.rest.dto.AlumnoRequestDTO;
 import com.colegio.machado.infraestructure.rest.mappers.AlumnoDTOMapper;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,12 +19,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AlumnosController {
 
-    private final AlumnoDTOMapper alumnoDTOMapper;
+    @Autowired
+    private AlumnosService alumnosService;
+    @Autowired
+    private AlumnoDTOMapper alumnoDTOMapper;
+
     private final GetAllAlumnosUseCase getAllAlumnosUseCase;
-    private final GetAlumnoByIdUseCase getAlumnoByIdUseCase;
-    private final CreateAlumnoUseCase createAlumnoUseCase;
-    private final UpdateAlumnoUseCase updateAlumnoUseCase;
-    private final DeleteAlumnoUseCase deleteAlumnoUseCase;
 
     /**
      * Explicación del método
@@ -32,21 +33,25 @@ public class AlumnosController {
     @GetMapping
     public ResponseEntity<List<AlumnoDTO>> getAlumnos(){
         List<Alumno> alumnos= getAllAlumnosUseCase.execute();
-        return ResponseEntity.ok(alumnoDTOMapper.mapDTO(alumnos));
+        List<AlumnoDTO> alumnoDTOList = alumnoDTOMapper.mapDTO(alumnos);
+        return ResponseEntity.ok(alumnoDTOList);
     }
 
     @GetMapping("/{id}")
     //@GetMapping("/alumno")
     public ResponseEntity<AlumnoDTO> getAlumnoByID(@PathVariable Long id){
-        return ResponseEntity.ok(alumnoDTOMapper.toDTO(getAlumnoByIdUseCase.execute(id)));
+        return ResponseEntity.ok(alumnoDTOMapper.toDTO(alumnosService.getAlumnoById(id)));
     }
 
 
     @PostMapping
-    public ResponseEntity<AlumnoDTO> guardarAlumno(@RequestBody @Valid AlumnoRequestDTO request){
+    public ResponseEntity<AlumnoDTO> guardarAlumno(@RequestBody AlumnoRequestDTO request){
         // DTO → Modelo
         Alumno alumno = alumnoDTOMapper.toModel(request);
-        AlumnoDTO response = alumnoDTOMapper.toDTO(createAlumnoUseCase.execute(alumno, request.clase()));
+        // Guardar con idClase
+        Alumno guardado = alumnosService.guardarAlumno(alumno, request.idClase());
+        // Modelo → DTO
+        AlumnoDTO response = alumnoDTOMapper.toDTO(guardado);
         return ResponseEntity
                 .created(URI.create("/alumnos/" + response.id()))
                 .body(response);
@@ -57,7 +62,7 @@ public class AlumnosController {
 
         Alumno alumno = alumnoDTOMapper.toModel(request);
 
-        Alumno actualizado = updateAlumnoUseCase.execute(id, alumno, request.clase());
+        Alumno actualizado = alumnosService.actualizarAlumno(id, alumno, request.idClase());
 
         AlumnoDTO response = alumnoDTOMapper.toDTO(actualizado);
 
@@ -65,9 +70,8 @@ public class AlumnosController {
     }
 
     @DeleteMapping ("/{id}")
-    public ResponseEntity<Void>  eliminarAlumno(@PathVariable Long id){
-        deleteAlumnoUseCase.executeDelete(id);
-        return ResponseEntity.noContent().build();
+    public void eliminarAlumno(@PathVariable Long id){
+        alumnosService.eliminarAlumno(id);
     }
 
 }

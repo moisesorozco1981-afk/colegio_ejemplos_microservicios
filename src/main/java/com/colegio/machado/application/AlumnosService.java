@@ -1,104 +1,85 @@
 package com.colegio.machado.application;
 
-import com.colegio.machado.application.exceptions.NotFoundException;
-import com.colegio.machado.application.usecase.*;
 import com.colegio.machado.domain.model.Alumno;
 import com.colegio.machado.domain.model.Clase;
-import com.colegio.machado.domain.ports.out.AlumnoRepository;
-import com.colegio.machado.domain.ports.out.ClaseRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.colegio.machado.infraestructure.database.AlumnosRepository;
+import com.colegio.machado.infraestructure.database.ClaseRepository;
+import com.colegio.machado.infraestructure.database.entities.AlumnoEntity;
+import com.colegio.machado.infraestructure.database.entities.ClaseEntity;
+import com.colegio.machado.infraestructure.database.mappers.AlumnoEntityMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-public class AlumnosService implements GetAllAlumnosUseCase,
-        GetAlumnoByIdUseCase,
-        CreateAlumnoUseCase,
-        UpdateAlumnoUseCase,
-        DeleteAlumnoUseCase {
+public class AlumnosService {
 
-    private final ClaseRepository claseRepository;
 
-    private final AlumnoRepository alumnoRepository;
+    @Autowired
+    ClaseRepository claseRepository;
+    @Autowired
+    AlumnosRepository alumnosRepository;
+    @Autowired
+    AlumnoEntityMapper alumnoMapper;
 
-    private static final Logger log = LoggerFactory.getLogger(AlumnosService.class);
+    public List<Alumno> getAllAlumnos() {
+        List<AlumnoEntity> alumnosEntity = alumnosRepository.findAll();
+        List<Alumno> alumnos = alumnoMapper.mapModel(alumnosEntity);
 
-    public AlumnosService(ClaseRepository claseRepository, AlumnoRepository alumnoRepository) {
-        this.claseRepository = claseRepository;
-        this.alumnoRepository = alumnoRepository;
+        return alumnos;
     }
 
-    @Override
-    public List<Alumno> execute() {
-        log.info("Obteniendo datos de todos los alumnos");
-        return alumnoRepository.findAll();
-    }
+    public Alumno getAlumnoById(Long id) {
 
-    //Busqueda de un alumno
-    @Override
-    public Alumno execute(Long idAlumno) {
-        log.info("Buscando alumno con id {}", idAlumno);
-        Alumno alumno = getAlumnoOrThrow(idAlumno);
-        log.info("Alumno encontrado: {}", alumno.getId());
+        AlumnoEntity alumnoEntity = alumnosRepository.findById(id).orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
+
+        Alumno alumno = alumnoMapper.toModel(alumnoEntity);
+
+        if (alumnoEntity.getClase() != null) {
+            alumno.setClase(new Clase(alumnoEntity.getClase().getId(), alumnoEntity.getClase().getClase(), alumnoEntity.getClase().getProfesor(), null));
+        }
+
         return alumno;
     }
 
-    //Create
-    @Override
-    public Alumno execute(Alumno alumno, Long idClase) {
-        log.info("Creando alumno con nombre {}", alumno.getNombre());
-        Clase clase = getClaseOrThrow(idClase);
-        alumno.setClase(clase);
-        Alumno saved = alumnoRepository.save(alumno);
-        log.info("Alumno creado correctamente con id {}", saved.getId());
-        return saved;
+    public Alumno guardarAlumno(Alumno alumno, Long idClase) {
+
+
+        // 🔥 1. Buscar la clase
+        ClaseEntity clase = claseRepository.findById(idClase).orElseThrow(() -> new RuntimeException("Clase no encontrada"));
+
+        // 🔥 2. Convertir modelo → entity
+        AlumnoEntity entity = alumnoMapper.toEntity(alumno);
+
+        // 🔥 3. Asignar la clase (CLAVE)
+        entity.setClase(clase);
+
+        // 🔥 4. Guardar
+        AlumnoEntity guardado = alumnosRepository.save(entity);
+
+        // 🔥 5. Convertir entity → modelo
+        return alumnoMapper.toModel(guardado);
     }
 
-    //Update
-    @Override
-    public Alumno execute(Long idAlumno, Alumno alumno, Long idClase) {
-        log.info("Actualizando alumno con id {}", idAlumno);
-        Alumno existente = getAlumnoOrThrow(idAlumno);
-        Clase clase = getClaseOrThrow(idClase);
+    public Alumno actualizarAlumno(Long id, Alumno alumno, Long idClase) {
 
-        existente.setNombre(alumno.getNombre());
-        existente.setApellido(alumno.getApellido());
-        existente.setEdad(alumno.getEdad());
-        existente.setClase(clase);
+        ClaseEntity clase = claseRepository.findById(idClase).orElseThrow(() -> new RuntimeException("Clase no encontrada"));
 
-        Alumno saved = alumnoRepository.save(existente);
-        log.info("Alumno con Id {} actualizado correctamente", saved.getId());
-        return saved;
+        AlumnoEntity entity = alumnosRepository.findById(id).orElseThrow(() -> new RuntimeException("Alumno no encontrada"));
+        entity.setClase(clase);
+        alumnoMapper.updateEntity(alumno, entity);
+
+        AlumnoEntity guardado = alumnosRepository.save(entity);
+
+        return alumnoMapper.toModel(guardado);
+
     }
 
-    //Delete
-    @Override
-    public void executeDelete(Long idAlumno) {
+    public void eliminarAlumno(Long id) {
 
-        log.info("Eliminando alumno con id {}", idAlumno);
+        AlumnoEntity alumno = alumnosRepository.findById(id).orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
 
-        Alumno alumno = getAlumnoOrThrow(idAlumno);
-        alumnoRepository.delete(idAlumno);
-        log.info("Alumno con Id {} eliminado correctamente", alumno.getId());
-    }
-
-    private Clase getClaseOrThrow(Long idClase) {
-        Clase clase = claseRepository.findById(idClase);
-        if (clase == null) {
-            log.error("Clase con id {} no encontrada", idClase);
-            throw new NotFoundException("Clase no encontrada");
-        }
-        return clase;
-    }
-
-    private Alumno getAlumnoOrThrow(Long idAlumno) {
-        Alumno alumno = alumnoRepository.findById(idAlumno);
-        if (alumno == null) {
-            log.error("Alumno con id {} no encontrado", idAlumno);
-            throw new NotFoundException("Alumno no encontrado");
-        }
-        return alumno;
+        alumnosRepository.delete(alumno);
     }
 }

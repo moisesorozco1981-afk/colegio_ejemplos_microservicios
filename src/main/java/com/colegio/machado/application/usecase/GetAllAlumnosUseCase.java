@@ -1,12 +1,21 @@
 package com.colegio.machado.application.usecase;
 
 import com.colegio.machado.domain.model.Alumno;
+import com.colegio.machado.domain.model.AlumnoRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-
-public interface GetAllAlumnosUseCase
+@Service
+@RequiredArgsConstructor
+public class GetAllAlumnosUseCase
 {
-    List<Alumno> execute();
 
+    private final AlumnoRepository alumnoRepository;
+
+    public List<Alumno> execute() {
+        //Podría haber mogollón de lógica de negocio aquí
+        return alumnoRepository.findAll();
+    }
 }

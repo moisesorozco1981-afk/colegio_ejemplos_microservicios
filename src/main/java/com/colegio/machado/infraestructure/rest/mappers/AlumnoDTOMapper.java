@@ -12,7 +12,7 @@ import java.util.List;
 
 @Mapper(componentModel = "spring")
 public interface AlumnoDTOMapper {
-        @Mapping(source = "clase", target = "clase")
+        // @Mapping(source = "name", target = "nombreDelChaval")
         AlumnoDTO toDTO(Alumno alumno);
 
         Alumno toModel(AlumnoDTO alumnoDTO);
@@ -27,7 +27,7 @@ public interface AlumnoDTOMapper {
 
                 return new SimpleClaseDTO(
                                 clase.getId(),
-                                clase.getNombre());
+                                clase.getClase());
         }
 
         default Clase map(SimpleClaseDTO claseDTO) {
@@ -37,6 +37,7 @@ public interface AlumnoDTOMapper {
                 return new Clase(
                                 claseDTO.id(),
                                 claseDTO.clase(),
+                                null,
                                 null);
         }
 
