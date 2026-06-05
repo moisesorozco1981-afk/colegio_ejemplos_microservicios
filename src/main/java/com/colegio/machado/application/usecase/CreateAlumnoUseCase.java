@@ -1,12 +1,9 @@
+
 package com.colegio.machado.application.usecase;
 
 import com.colegio.machado.domain.model.Alumno;
 
-import java.util.List;
-
-
-public interface GetAllAlumnosUseCase
-{
-    List<Alumno> execute();
-
+public interface CreateAlumnoUseCase {
+    Alumno execute(Alumno alumno, Long idClase);
 }
+

@@ -5,18 +5,26 @@ import com.colegio.machado.domain.model.Clase;
 import com.colegio.machado.infraestructure.rest.dto.ClaseDTO;
 import com.colegio.machado.infraestructure.rest.dto.ClaseRequestDTO;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.List;
 
-@Mapper(componentModel = "spring", uses = {AlumnoDTOMapper.class})
+@Mapper(componentModel = "spring")
 public interface ClaseDTOMapper {
-    //@Mapping(source = "name", target = "nombreDelChaval")
+
+    @Mapping(source = "nombre", target = "clase")
+    @Mapping(target = "alumnos", ignore = true)
     ClaseDTO toDTO(Clase clase);
+
+    @Mapping(source = "clase", target = "nombre")
     Clase toModel(ClaseDTO claseDTO);
 
     List<ClaseDTO> mapDTO(List<Clase> clases);
+
     List<Clase> mapModel(List<ClaseDTO> claseDTO);
 
-    //NUEVO PARA POST/PUT
+
+    @Mapping(source = "nombre", target = "nombre")
+    @Mapping(source = "profesor", target = "profesor")
     Clase toModel(ClaseRequestDTO dto);
 }

@@ -30,7 +30,7 @@ public class AlumnoEntity {
     @Column
     private Integer edad;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn (name = "clase_id")
     private ClaseEntity clase;
 }
